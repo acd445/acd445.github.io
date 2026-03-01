@@ -4,6 +4,7 @@
     const sections = sectionIds
         .map((id) => document.getElementById(id))
         .filter(Boolean);
+    const header = document.querySelector(".site-header");
 
     if (!navLinks.length || !sections.length) {
         return;
@@ -21,24 +22,52 @@
         });
     };
 
-    const observer = new IntersectionObserver(
-        (entries) => {
-            const visible = entries
-                .filter((entry) => entry.isIntersecting)
-                .sort((a, b) => b.intersectionRatio - a.intersectionRatio);
+    const getHeaderOffset = () => (header ? header.offsetHeight : 0) + 12;
 
-            if (visible.length) {
-                setActive(visible[0].target.id);
+    const getCurrentSectionId = () => {
+        const marker = window.scrollY + getHeaderOffset() + window.innerHeight * 0.25;
+        let currentId = sections[0].id;
+
+        sections.forEach((section) => {
+            if (marker >= section.offsetTop) {
+                currentId = section.id;
             }
-        },
-        {
-            root: null,
-            rootMargin: "-35% 0px -50% 0px",
-            threshold: [0.2, 0.45, 0.7]
+        });
+
+        const viewportBottom = window.scrollY + window.innerHeight;
+        const pageBottom = document.documentElement.scrollHeight - 2;
+        if (viewportBottom >= pageBottom) {
+            currentId = sections[sections.length - 1].id;
         }
-    );
+        return currentId;
+    };
 
-    sections.forEach((section) => observer.observe(section));
+    let ticking = false;
+    const updateActiveFromScroll = () => {
+        setActive(getCurrentSectionId());
+        ticking = false;
+    };
 
-    setActive("home");
+    const onScroll = () => {
+        if (ticking) {
+            return;
+        }
+        ticking = true;
+        window.requestAnimationFrame(updateActiveFromScroll);
+    };
+
+    navLinks.forEach((link) => {
+        link.addEventListener("click", () => {
+            const id = link.getAttribute("data-nav");
+            if (id) {
+                setActive(id);
+            }
+        });
+    });
+
+    window.addEventListener("scroll", onScroll, { passive: true });
+    window.addEventListener("resize", onScroll);
+    window.addEventListener("load", onScroll);
+
+    setActive(getCurrentSectionId());
 })();
